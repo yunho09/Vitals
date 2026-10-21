@@ -150,7 +150,7 @@ var VitalsMenuButton = GObject.registerClass({
         let monitorButton = this._createRoundButton('org.gnome.SystemMonitor-symbolic', _('System Monitor'));
         monitorButton.connect('clicked', (self) => {
             this.menu._getTopMenu().close();
-            Util.spawn(this._settings.get_string('monitor-cmd').split(" "));
+            Util.spawn(this._monitorCommand());
         });
         customButtonBox.add_child(monitorButton);
 
@@ -208,6 +208,23 @@ var VitalsMenuButton = GObject.registerClass({
         });
 
         return button;
+    }
+
+    _monitorCommand() {
+        let command = this._settings.get_string('monitor-cmd').split(" ");
+
+        // configured command wins when it is installed
+        if (GLib.find_program_in_path(command[0]))
+            return command;
+
+        // otherwise fall back to a known system monitor (some distros no longer ship gnome-system-monitor)
+        for (let program of ['gnome-system-monitor', 'resources', 'gnome-usage']) {
+            if (GLib.find_program_in_path(program))
+                return [program];
+        }
+
+        // nothing found, let Util.spawn report the configured command as missing
+        return command;
     }
 
     _removeMissingHotSensors(hotSensors) {
